@@ -13,30 +13,32 @@ export function ReadingLog({ logs }: { logs: LogRow[] }) {
         <CardDescription>Latest 50 sensor readings</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Vehicle Count</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.map((log) => (
-              <TableRow key={log.id}>
-                <TableCell className="font-mono text-xs">{fmtTime(log.recordedAt)}</TableCell>
-                <TableCell>{log.vehicleCount}</TableCell>
-                <TableCell>
-                  {log.isCrowded ? (
-                    <Badge>Busy</Badge>
-                  ) : (
-                    <Badge variant="secondary">Quiet</Badge>
-                  )}
-                </TableCell>
+        <div className="max-h-96 overflow-y-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="sticky top-0 bg-background">
+                <TableHead>Time</TableHead>
+                <TableHead>Vehicle Count</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {logs.map((log) => (
+                <TableRow key={log.id}>
+                  <TableCell className="font-mono text-xs">{fmtTime(log.recordedAt)}</TableCell>
+                  <TableCell>{log.vehicleCount}</TableCell>
+                  <TableCell>
+                    {log.isCrowded ? (
+                      <Badge>Busy</Badge>
+                    ) : (
+                      <Badge variant="secondary">Quiet</Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
