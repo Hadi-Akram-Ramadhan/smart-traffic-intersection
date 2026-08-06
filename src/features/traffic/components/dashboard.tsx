@@ -54,7 +54,7 @@ export function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Sensor Detect</CardDescription>
+            <CardDescription>Sensor Detections</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{data.summary.readingsToday}</p>

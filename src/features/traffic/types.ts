@@ -19,6 +19,7 @@ export type StatsResponse = {
   logs: LogRow[];
   summary: {
     totalVehiclesToday: number;
+    /** Jumlah kali sensor mengirim data hari ini (COUNT baris) */
     readingsToday: number;
     avgVehiclesToday: number;
   };
