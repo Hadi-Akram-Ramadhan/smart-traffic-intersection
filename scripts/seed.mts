@@ -1,7 +1,7 @@
 // Seed script: insert readings spread across today, last 7 days, last 30 days.
 // Run: node --experimental-strip-types scripts/seed.mts
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient } from "../src/generated/prisma/client.ts";
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

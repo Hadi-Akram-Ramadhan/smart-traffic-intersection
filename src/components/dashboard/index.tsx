@@ -22,129 +22,79 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip as ChartJSTooltip,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartJSTooltip);
-
-const POLL_INTERVAL_MS = 15_000;
-
-type LogRow = {
-  id: number;
-  vehicleCount: number;
-  isCrowded: boolean;
-  recordedAt: string;
-};
-
-type RawRow = {
-  bucket: string;
-  vehicles: number;
-  readings: number;
-  crowded: number;
-};
-
-type StatsResponse = {
-  today: RawRow[];
-  last7: RawRow[];
-  last30: RawRow[];
-  logs: LogRow[];
-  summary: {
-    totalVehiclesToday: number;
-    readingsToday: number;
-    avgVehiclesToday: number;
-  };
-};
-
-type Range = "today" | "7d" | "30d";
-
-const RANGES: { key: Range; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "7d", label: "7 Days" },
-  { key: "30d", label: "30 Days" },
-];
-
-function fmtBucket(b: string): string {
-  const d = new Date(b);
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtDay(b: string): string {
-  const d = new Date(b);
-  return d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
-}
-
-function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-const rechartsConfig = {
-  vehicles: { label: "Vehicles", color: "hsl(var(--chart-1))" },
-};
+import type { RawRow, Range, StatsResponse } from "./types";
+import {
+  POLL_INTERVAL_MS,
+  RANGES,
+  chartConfig,
+  fmtHour,
+  fmtDay,
+  fmtTime,
+} from "./constants";
 
 function TodayBarChart({ data }: { data: RawRow[] }) {
+  const chartData = data.map((r) => ({ ...r, hour: fmtHour(r.bucket) }));
   return (
-    <div style={{ height: 288, width: '100%' }}>
-      <Bar
-        data={{
-          labels: data.map((r) => fmtBucket(r.bucket)),
-          datasets: [
-            {
-              label: "Vehicles",
-              data: data.map((r) => r.vehicles),
-              backgroundColor: "hsl(var(--chart-1))",
-              borderRadius: 4,
-            },
-          ],
-        }}
-        options={{
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false } },
-            y: { grid: { color: "hsl(var(--muted))" } },
-          },
-        }}
-      />
-    </div>
+    <ChartContainer config={chartConfig} className="h-72 w-full">
+      <BarChart data={chartData} accessibilityLayer>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="hour" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={40} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar dataKey="vehicles" fill="var(--color-vehicles)" radius={4} />
+      </BarChart>
+    </ChartContainer>
   );
 }
 
-function DailyLineChart({ data }: { data: RawRow[] }) {
-  const chartData = data.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
+function WeekBarChart({ data }: { data: RawRow[] }) {
+  const chartData = data.map((r) => ({ ...r, day: fmtDay(r.bucket) }));
   return (
-    <div style={{ height: 288, width: '100%' }}>
-      <ChartContainer config={rechartsConfig} className="h-full w-full" initialDimension={{ width: 800, height: 288 }}>
-        <LineChart data={chartData} accessibilityLayer>
-          <CartesianGrid vertical={false} />
-          <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-          <YAxis tickLine={false} axisLine={false} width={40} />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <Line
-            dataKey="vehicles"
-            stroke="var(--color-vehicles)"
-            strokeWidth={2}
-            type="monotone"
-            dot={false}
-          />
-        </LineChart>
-      </ChartContainer>
-    </div>
+    <ChartContainer config={chartConfig} className="h-72 w-full">
+      <BarChart data={chartData} accessibilityLayer>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={40} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar dataKey="vehicles" fill="var(--color-vehicles)" radius={4} />
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+function MonthAreaChart({ data }: { data: RawRow[] }) {
+  const chartData = data.map((r) => ({ ...r, day: fmtDay(r.bucket) }));
+  return (
+    <ChartContainer config={chartConfig} className="h-72 w-full">
+      <AreaChart data={chartData} accessibilityLayer>
+        <defs>
+          <linearGradient id="fillVehicles" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-vehicles)" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="var(--color-vehicles)" stopOpacity={0.1} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={40} />
+        <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+        <Area
+          dataKey="vehicles"
+          type="natural"
+          fill="url(#fillVehicles)"
+          stroke="var(--color-vehicles)"
+        />
+      </AreaChart>
+    </ChartContainer>
   );
 }
 
@@ -259,8 +209,10 @@ export default function Dashboard() {
           <div className="h-72">
             {range === "today" ? (
               <TodayBarChart data={chartData} />
+            ) : range === "7d" ? (
+              <WeekBarChart data={chartData} />
             ) : (
-              <DailyLineChart data={chartData} />
+              <MonthAreaChart data={chartData} />
             )}
           </div>
         </CardContent>
