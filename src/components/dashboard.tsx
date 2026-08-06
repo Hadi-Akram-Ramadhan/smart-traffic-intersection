@@ -98,49 +98,53 @@ const rechartsConfig = {
 
 function TodayBarChart({ data }: { data: RawRow[] }) {
   return (
-    <Bar
-      data={{
-        labels: data.map((r) => fmtBucket(r.bucket)),
-        datasets: [
-          {
-            label: "Vehicles",
-            data: data.map((r) => r.vehicles),
-            backgroundColor: "oklch(0.546 0.245 262.881)",
-            borderRadius: 4,
+    <div style={{ height: 288, width: '100%' }}>
+      <Bar
+        data={{
+          labels: data.map((r) => fmtBucket(r.bucket)),
+          datasets: [
+            {
+              label: "Vehicles",
+              data: data.map((r) => r.vehicles),
+              backgroundColor: "hsl(var(--chart-1))",
+              borderRadius: 4,
+            },
+          ],
+        }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "hsl(var(--muted))" } },
           },
-        ],
-      }}
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false } },
-          y: { grid: { color: "hsl(var(--muted))" } },
-        },
-      }}
-    />
+        }}
+      />
+    </div>
   );
 }
 
 function DailyLineChart({ data }: { data: RawRow[] }) {
   const chartData = data.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
   return (
-    <ChartContainer config={rechartsConfig} className="h-72 w-full">
-      <LineChart data={chartData} accessibilityLayer>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={40} />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <Line
-          dataKey="vehicles"
-          stroke="var(--color-vehicles)"
-          strokeWidth={2}
-          type="monotone"
-          dot={false}
-        />
-      </LineChart>
-    </ChartContainer>
+    <div style={{ height: 288, width: '100%' }}>
+      <ChartContainer config={rechartsConfig} className="h-full w-full" initialDimension={{ width: 800, height: 288 }}>
+        <LineChart data={chartData} accessibilityLayer>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
+          <YAxis tickLine={false} axisLine={false} width={40} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Line
+            dataKey="vehicles"
+            stroke="var(--color-vehicles)"
+            strokeWidth={2}
+            type="monotone"
+            dot={false}
+          />
+        </LineChart>
+      </ChartContainer>
+    </div>
   );
 }
 
