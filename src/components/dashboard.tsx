@@ -52,6 +52,14 @@ type StatsResponse = {
   };
 };
 
+type Range = "today" | "7d" | "30d";
+
+const RANGES: { key: Range; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "7d", label: "7 Days" },
+  { key: "30d", label: "30 Days" },
+];
+
 function fmtBucket(b: string): string {
   const d = new Date(b);
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
@@ -75,11 +83,11 @@ function fmtTime(iso: string): string {
 
 const config = {
   vehicles: { label: "Vehicles", color: "hsl(var(--chart-1))" },
-  crowded: { label: "Busy", color: "hsl(var(--chart-2))" },
 };
 
 export default function Dashboard() {
   const [data, setData] = useState<StatsResponse | null>(null);
+  const [range, setRange] = useState<Range>("today");
 
   useEffect(() => {
     let cancelled = false;
@@ -111,9 +119,21 @@ export default function Dashboard() {
     );
   }
 
-  const todayData = data.today.map((r) => ({ ...r, bucket: fmtBucket(r.bucket) }));
-  const sevenData = data.last7.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
-  const monthData = data.last30.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
+  const raw =
+    range === "today" ? data.today : range === "7d" ? data.last7 : data.last30;
+  const chartData =
+    range === "today"
+      ? raw.map((r) => ({ ...r, bucket: fmtBucket(r.bucket) }))
+      : raw.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
+
+  const title =
+    range === "today"
+      ? "Vehicles Today"
+      : range === "7d"
+        ? "Vehicles Last 7 Days"
+        : "Vehicles Last 30 Days";
+  const subtitle =
+    range === "today" ? "Vehicles per hour" : "Total vehicles per day";
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -152,59 +172,49 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Today chart */}
+      {/* Single chart with range selector */}
       <Card>
-        <CardHeader>
-          <CardTitle>Vehicles Today</CardTitle>
-          <CardDescription>Vehicles per hour</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{subtitle}</CardDescription>
+          </div>
+          <div className="flex gap-1 rounded-lg border bg-muted p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => setRange(r.key)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  range === r.key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-72 w-full">
-            <BarChart data={todayData} accessibilityLayer>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} width={40} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="vehicles" fill="var(--color-vehicles)" radius={4} />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      {/* 7 days chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Vehicles Last 7 Days</CardTitle>
-          <CardDescription>Total vehicles per day</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={config} className="h-72 w-full">
-            <LineChart data={sevenData} accessibilityLayer>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} width={40} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Line dataKey="vehicles" stroke="var(--color-vehicles)" strokeWidth={2} type="monotone" dot={false} />
-            </LineChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      {/* 30 days chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Vehicles Last 30 Days</CardTitle>
-          <CardDescription>Total vehicles per day</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={config} className="h-72 w-full">
-            <LineChart data={monthData} accessibilityLayer>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} width={40} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Line dataKey="vehicles" stroke="var(--color-vehicles)" strokeWidth={2} type="monotone" dot={false} />
-            </LineChart>
+            {range === "today" ? (
+              <BarChart data={chartData} accessibilityLayer>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis tickLine={false} axisLine={false} width={40} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="vehicles" fill="var(--color-vehicles)" radius={4} />
+              </BarChart>
+            ) : (
+              <LineChart data={chartData} accessibilityLayer>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis tickLine={false} axisLine={false} width={40} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line dataKey="vehicles" stroke="var(--color-vehicles)" strokeWidth={2} type="monotone" dot={false} />
+              </LineChart>
+            )}
           </ChartContainer>
         </CardContent>
       </Card>
