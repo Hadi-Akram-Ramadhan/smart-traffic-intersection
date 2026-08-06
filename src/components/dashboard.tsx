@@ -105,7 +105,7 @@ function TodayBarChart({ data }: { data: RawRow[] }) {
           {
             label: "Vehicles",
             data: data.map((r) => r.vehicles),
-            backgroundColor: "hsl(221, 83%, 53%)",
+            backgroundColor: "oklch(0.546 0.245 262.881)",
             borderRadius: 4,
           },
         ],
