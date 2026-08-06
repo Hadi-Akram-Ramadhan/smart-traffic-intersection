@@ -22,7 +22,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip as ChartJSTooltip,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartJSTooltip);
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -81,9 +92,57 @@ function fmtTime(iso: string): string {
   });
 }
 
-const config = {
+const rechartsConfig = {
   vehicles: { label: "Vehicles", color: "hsl(var(--chart-1))" },
 };
+
+function TodayBarChart({ data }: { data: RawRow[] }) {
+  return (
+    <Bar
+      data={{
+        labels: data.map((r) => fmtBucket(r.bucket)),
+        datasets: [
+          {
+            label: "Vehicles",
+            data: data.map((r) => r.vehicles),
+            backgroundColor: "hsl(221, 83%, 53%)",
+            borderRadius: 4,
+          },
+        ],
+      }}
+      options={{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: "hsl(var(--muted))" } },
+        },
+      }}
+    />
+  );
+}
+
+function DailyLineChart({ data }: { data: RawRow[] }) {
+  const chartData = data.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
+  return (
+    <ChartContainer config={rechartsConfig} className="h-72 w-full">
+      <LineChart data={chartData} accessibilityLayer>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={40} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Line
+          dataKey="vehicles"
+          stroke="var(--color-vehicles)"
+          strokeWidth={2}
+          type="monotone"
+          dot={false}
+        />
+      </LineChart>
+    </ChartContainer>
+  );
+}
 
 export default function Dashboard() {
   const [data, setData] = useState<StatsResponse | null>(null);
@@ -119,12 +178,8 @@ export default function Dashboard() {
     );
   }
 
-  const raw =
-    range === "today" ? data.today : range === "7d" ? data.last7 : data.last30;
   const chartData =
-    range === "today"
-      ? raw.map((r) => ({ ...r, bucket: fmtBucket(r.bucket) }))
-      : raw.map((r) => ({ ...r, bucket: fmtDay(r.bucket) }));
+    range === "today" ? data.today : range === "7d" ? data.last7 : data.last30;
 
   const title =
     range === "today"
@@ -197,25 +252,13 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={config} className="h-72 w-full">
+          <div className="h-72">
             {range === "today" ? (
-              <BarChart data={chartData} accessibilityLayer>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} width={40} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="vehicles" fill="var(--color-vehicles)" radius={4} />
-              </BarChart>
+              <TodayBarChart data={chartData} />
             ) : (
-              <LineChart data={chartData} accessibilityLayer>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="bucket" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} width={40} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line dataKey="vehicles" stroke="var(--color-vehicles)" strokeWidth={2} type="monotone" dot={false} />
-              </LineChart>
+              <DailyLineChart data={chartData} />
             )}
-          </ChartContainer>
+          </div>
         </CardContent>
       </Card>
 

@@ -9,6 +9,16 @@ function toNum(v: bigint | number): number {
   return typeof v === "bigint" ? Number(v) : v;
 }
 
+const DAILY_QUERY = (start: Date) => prisma.$queryRaw<RawRow[]>`
+  SELECT DATE_TRUNC('day', "recordedAt") AS bucket,
+         SUM("vehicleCount")::int AS vehicles,
+         COUNT(*)::int AS readings,
+         COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
+  FROM "TrafficReading"
+  WHERE "recordedAt" >= ${start}
+  GROUP BY 1 ORDER BY 1
+`;
+
 export async function GET() {
   const now = new Date();
   const todayStart = new Date(now);
@@ -26,23 +36,8 @@ export async function GET() {
       WHERE "recordedAt" >= ${todayStart}
       GROUP BY 1 ORDER BY 1
     `,
-    prisma.$queryRaw<RawRow[]>`
-      SELECT DATE_TRUNC('day', "recordedAt") AS bucket,
-             SUM("vehicleCount")::int AS vehicles,
-             COUNT(*)::int AS readings,
-             COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-      FROM "TrafficReading"
-      WHERE "recordedAt" >= ${weekStart}
-      GROUP BY 1 ORDER BY 1
-    `,
-    prisma.$queryRaw<RawRow[]>`
-      SELECT DATE_TRUNC('day', "recordedAt") AS bucket,
-             SUM("vehicleCount")::int AS readings,
-             COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-      FROM "TrafficReading"
-      WHERE "recordedAt" >= ${monthStart}
-      GROUP BY 1 ORDER BY 1
-    `,
+    DAILY_QUERY(weekStart),
+    DAILY_QUERY(monthStart),
     prisma.trafficReading.findMany({ orderBy: { recordedAt: "desc" }, take: 50 }),
   ]);
 
