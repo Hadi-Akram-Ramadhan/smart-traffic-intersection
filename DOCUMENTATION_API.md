@@ -94,6 +94,48 @@ GET /api/sensor-readings?limit=10
 
 ---
 
+### GET `/api/sensor-readings/stats`
+
+Mengambil data agregat untuk dashboard: per-jam hari ini, per-hari 7 hari terakhir, per-hari 30 hari terakhir, 50 log terbaru, dan ringkasan.
+
+**Response 200 OK:**
+```json
+{
+  "today": [
+    { "bucket": "2026-08-06T07:00:00.000Z", "vehicles": 13, "readings": 2, "crowded": 2 }
+  ],
+  "last7": [
+    { "bucket": "2026-08-05T00:00:00.000Z", "vehicles": 78, "readings": 1, "crowded": 1 }
+  ],
+  "last30": [
+    { "bucket": "2026-07-08T00:00:00.000Z", "vehicles": 55, "readings": 1, "crowded": 1 }
+  ],
+  "logs": [
+    { "id": 14, "vehicleCount": 2, "isCrowded": false, "recordedAt": "2026-08-06T07:05:12.211Z" }
+  ],
+  "summary": {
+    "totalVehiclesToday": 16,
+    "readingsToday": 3,
+    "avgVehiclesToday": 8
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `today` | array | Agregasi per jam (`DATE_TRUNC('hour')`) sejak midnight hari ini. `vehicles` = `SUM(vehicleCount)`, `readings` = `COUNT(*)`, `crowded` = jumlah baris `isCrowded` |
+| `last7` | array | Agregasi per hari (`DATE_TRUNC('day')`) untuk 7 hari terakhir termasuk hari ini |
+| `last30` | array | Agregasi per hari untuk 30 hari terakhir termasuk hari ini |
+| `logs` | array | 50 bacaan sensor terbaru (descending) |
+| `summary.totalVehiclesToday` | integer | Total kendaraan hari ini = `SUM(vehicleCount)` semua bucket jam |
+| `summary.readingsToday` | integer | **Jumlah deteksi sensor hari ini** = `SUM(readings)` = `COUNT(*)` baris. Bukan jumlah kendaraan |
+| `summary.avgVehiclesToday` | integer | `totalVehiclesToday / jumlah bucket jam` (rata-rata kendaraan per jam) |
+
+**Contoh arti `readingsToday`:** sensor kirim data 3 kali hari ini (5, 8, lalu 3 kendaraan):
+`totalVehiclesToday` = 16, `readingsToday` = 3 (tiga kali kirim), `avgVehiclesToday` = 8 (16 / 2 bucket jam).
+
+---
+
 ## Database Schema
 
 **Table: `TrafficReading`**
