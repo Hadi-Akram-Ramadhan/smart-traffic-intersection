@@ -24,6 +24,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 
+const POLL_INTERVAL_MS = 15_000;
+
 type LogRow = {
   id: number;
   vehicleCount: number;
@@ -52,17 +54,17 @@ type StatsResponse = {
 
 function fmtBucket(b: string): string {
   const d = new Date(b);
-  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 function fmtDay(b: string): string {
   const d = new Date(b);
-  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
 }
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString("id-ID", {
+  return d.toLocaleString("en-US", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -72,18 +74,33 @@ function fmtTime(iso: string): string {
 }
 
 const config = {
-  vehicles: { label: "Kendaraan", color: "hsl(var(--chart-1))" },
-  crowded: { label: "Rame", color: "hsl(var(--chart-2))" },
+  vehicles: { label: "Vehicles", color: "hsl(var(--chart-1))" },
+  crowded: { label: "Busy", color: "hsl(var(--chart-2))" },
 };
 
 export default function Dashboard() {
   const [data, setData] = useState<StatsResponse | null>(null);
 
   useEffect(() => {
-    fetch("/api/sensor-readings/stats")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(console.error);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch("/api/sensor-readings/stats");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    load();
+    const id = setInterval(load, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   if (!data) {
@@ -101,17 +118,17 @@ export default function Dashboard() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard Lalu Lintas</h1>
+        <h1 className="text-2xl font-semibold">Traffic Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Pantauan kendaraan di persimpangan dari sensor IoT
+          Vehicle monitoring at the intersection from IoT sensors
         </p>
       </div>
 
-      {/* Ringkasan */}
+      {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Kendaraan Hari Ini</CardDescription>
+            <CardDescription>Total Vehicles Today</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{data.summary.totalVehiclesToday}</p>
@@ -119,7 +136,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pembacaan Hari Ini</CardDescription>
+            <CardDescription>Readings Today</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{data.summary.readingsToday}</p>
@@ -127,7 +144,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Rata-rata Kendaraan / Jam</CardDescription>
+            <CardDescription>Avg Vehicles / Hour</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{data.summary.avgVehiclesToday}</p>
@@ -135,11 +152,11 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Chart Hari Ini */}
+      {/* Today chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Kendaraan Hari Ini</CardTitle>
-          <CardDescription>Jumlah kendaraan per jam</CardDescription>
+          <CardTitle>Vehicles Today</CardTitle>
+          <CardDescription>Vehicles per hour</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-72 w-full">
@@ -154,11 +171,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Chart 7 Hari */}
+      {/* 7 days chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Kendaraan 7 Hari Terakhir</CardTitle>
-          <CardDescription>Total kendaraan per hari</CardDescription>
+          <CardTitle>Vehicles Last 7 Days</CardTitle>
+          <CardDescription>Total vehicles per day</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-72 w-full">
@@ -173,11 +190,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Chart 30 Hari */}
+      {/* 30 days chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Kendaraan 30 Hari Terakhir</CardTitle>
-          <CardDescription>Total kendaraan per hari</CardDescription>
+          <CardTitle>Vehicles Last 30 Days</CardTitle>
+          <CardDescription>Total vehicles per day</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={config} className="h-72 w-full">
@@ -195,15 +212,15 @@ export default function Dashboard() {
       {/* Logging */}
       <Card>
         <CardHeader>
-          <CardTitle>Log Pembacaan</CardTitle>
-          <CardDescription>50 pembacaan sensor terbaru</CardDescription>
+          <CardTitle>Reading Log</CardTitle>
+          <CardDescription>Latest 50 sensor readings</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Waktu</TableHead>
-                <TableHead>Jumlah Kendaraan</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Vehicle Count</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -214,9 +231,9 @@ export default function Dashboard() {
                   <TableCell>{log.vehicleCount}</TableCell>
                   <TableCell>
                     {log.isCrowded ? (
-                      <Badge>Rame</Badge>
+                      <Badge>Busy</Badge>
                     ) : (
-                      <Badge variant="secondary">Sepi</Badge>
+                      <Badge variant="secondary">Quiet</Badge>
                     )}
                   </TableCell>
                 </TableRow>
