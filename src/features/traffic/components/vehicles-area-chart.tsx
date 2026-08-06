@@ -1,0 +1,41 @@
+"use client";
+
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
+import { chartConfig } from "../constants";
+import type { RawRow } from "../types";
+
+export function VehiclesAreaChart({
+  data,
+  xKey,
+  xFormatter,
+}: {
+  data: RawRow[];
+  xKey: "hour" | "day";
+  xFormatter: (b: string) => string;
+}) {
+  const chartData = data.map((r) => ({ ...r, [xKey]: xFormatter(r.bucket) }));
+  return (
+    <ChartContainer config={chartConfig} className="h-72 w-full">
+      <AreaChart data={chartData} accessibilityLayer>
+        <defs>
+          <linearGradient id="fillVehicles" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-vehicles)" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="var(--color-vehicles)" stopOpacity={0.1} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={40} />
+        <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+        <Area
+          dataKey="vehicles"
+          type="natural"
+          fill="url(#fillVehicles)"
+          stroke="var(--color-vehicles)"
+        />
+      </AreaChart>
+    </ChartContainer>
+  );
+}
