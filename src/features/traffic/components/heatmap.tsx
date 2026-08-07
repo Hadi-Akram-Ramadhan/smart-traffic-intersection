@@ -18,18 +18,24 @@ function cellColor(value: number, max: number) {
 export function Heatmap() {
   const [grid, setGrid] = useState<number[][] | null>(null);
   const [max, setMax] = useState(1);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/sensor-readings/heatmap")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
       .then((d) => {
         if (!cancelled) {
           setGrid(d.grid);
           setMax(d.max);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -43,7 +49,11 @@ export function Heatmap() {
       </CardHeader>
       <CardContent>
         {grid === null ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          error ? (
+            <p className="text-sm text-muted-foreground">Failed to load heatmap.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">

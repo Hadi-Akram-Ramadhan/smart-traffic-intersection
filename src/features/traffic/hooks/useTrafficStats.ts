@@ -6,8 +6,8 @@ import { fetchTrafficStats } from "../services/traffic";
 import { POLL_INTERVAL_MS } from "../constants";
 import type { StatsResponse } from "../types";
 
-export function useTrafficStats(): StatsResponse | null {
-  const [data, setData] = useState<StatsResponse | null>(null);
+export function useTrafficStats(): StatsResponse | null | "error" {
+  const [data, setData] = useState<StatsResponse | null | "error">(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,6 +18,7 @@ export function useTrafficStats(): StatsResponse | null {
         if (!cancelled) setData(json);
       } catch (err) {
         console.error(err);
+        if (!cancelled) setData("error");
       }
     }
 

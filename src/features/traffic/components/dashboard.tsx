@@ -15,6 +15,15 @@ export function Dashboard() {
   const data = useTrafficStats();
   const [range, setRange] = useState<Range>("today");
 
+  if (data === "error") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 py-32 text-center text-muted-foreground">
+        <p className="text-lg font-semibold">Could not load traffic data</p>
+        <p className="text-sm">Check your connection and refresh.</p>
+      </div>
+    );
+  }
+
   if (!data) {
     return (
       <div className="flex flex-1 items-center justify-center py-32 text-muted-foreground">

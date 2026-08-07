@@ -13,17 +13,19 @@ type Prediction = {
 
 export function PredictionWidget() {
   const [pred, setPred] = useState<Prediction | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const res = await fetch("/api/sensor-readings/predict");
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`${res.status}`);
         const json = await res.json();
-        if (!cancelled) setPred(json);
+        if (!cancelled) { setPred(json); setError(false); }
       } catch (e) {
         console.error(e);
+        if (!cancelled) setError(true);
       }
     }
     load();
@@ -40,7 +42,11 @@ export function PredictionWidget() {
         <CardDescription>Tomorrow&apos;s Prediction</CardDescription>
         <CardTitle className="text-2xl">
           {pred === null ? (
-            <span className="text-muted-foreground">Loading...</span>
+            error ? (
+              <span className="text-muted-foreground">Unavailable</span>
+            ) : (
+              <span className="text-muted-foreground">Loading...</span>
+            )
           ) : pred.predictedCount === null ? (
             <span className="text-muted-foreground">No data yet</span>
           ) : (
