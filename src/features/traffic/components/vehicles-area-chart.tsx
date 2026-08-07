@@ -1,9 +1,9 @@
 "use client";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
-import { chartConfig } from "../constants";
+import { chartConfig, PEAK_THRESHOLD } from "../constants";
 import type { RawRow } from "../types";
 
 export function VehiclesAreaChart({
@@ -16,6 +16,8 @@ export function VehiclesAreaChart({
   xFormatter: (b: string) => string;
 }) {
   const chartData = data.map((r) => ({ ...r, [xKey]: xFormatter(r.bucket) }));
+  const maxVehicles = Math.max(0, ...data.map((r) => r.vehicles));
+  const yDomain = [0, Math.max(maxVehicles + 20, PEAK_THRESHOLD * 2)] as [number, number];
   return (
     <ChartContainer config={chartConfig} className="h-72 w-full">
       <AreaChart data={chartData} accessibilityLayer>
@@ -27,8 +29,20 @@ export function VehiclesAreaChart({
         </defs>
         <CartesianGrid vertical={false} />
         <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickLine={false} axisLine={false} width={40} />
+        <YAxis tickLine={false} axisLine={false} width={40} domain={yDomain} />
         <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+        <ReferenceLine
+          y={PEAK_THRESHOLD}
+          stroke="hsl(var(--chart-2))"
+          strokeDasharray="6 4"
+          strokeWidth={2}
+          label={{
+            value: `Peak (${PEAK_THRESHOLD})`,
+            position: "right",
+            fill: "hsl(var(--chart-2))",
+            fontSize: 11,
+          }}
+        />
         <Area
           dataKey="vehicles"
           type="natural"
