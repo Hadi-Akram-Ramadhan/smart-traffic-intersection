@@ -10,8 +10,8 @@ export const RANGES: { key: Range; label: string }[] = [
 
 export const PEAK_THRESHOLD = 50;
 export const chartConfig = {
-  vehicles: { label: "Vehicles", color: "hsl(var(--chart-1))" },
-  previous: { label: "Previous Period", color: "hsl(var(--chart-2))" },
+  vehicles: { label: "Vehicles (current)", color: "hsl(var(--chart-1))" },
+  previous: { label: "Previous period", color: "hsl(var(--chart-2))" },
 };
 
 export function fmtHour(b: string): string {

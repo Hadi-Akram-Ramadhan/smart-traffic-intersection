@@ -44,7 +44,9 @@ export function Dashboard() {
         ? "Vehicles Last 7 Days"
         : "Vehicles Last 30 Days";
   const subtitle =
-    range === "today" ? "Vehicles per hour" : "Total vehicles per day";
+    range === "today"
+      ? "Vehicles per hour · orange compares the previous day"
+      : "Total vehicles per day · orange compares the previous period";
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
