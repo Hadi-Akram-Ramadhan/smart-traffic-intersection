@@ -92,6 +92,30 @@ export function Heatmap() {
                 ))}
               </tbody>
             </table>
+
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Low
+              </span>
+              {[0.25, 0.5, 0.75, 1].map((t) => (
+                <span
+                  key={t}
+                  className="inline-block h-3 w-6 rounded-sm"
+                  style={{
+                    backgroundColor: cellColor(t * 100, 100),
+                  }}
+                />
+              ))}
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                High
+              </span>
+              <span className="ml-2 inline-block h-3 w-3 rounded-sm bg-muted/30" />
+              <span className="text-[10px] text-muted-foreground">No data</span>
+            </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Mencerminkan rata-rata kendaraan per jam untuk tiap hari dalam satu minggu
+              (data 30 hari terakhir). Kotak dengan volume lebih tinggi tampak lebih merah.
+            </p>
           </div>
         )}
       </CardContent>
