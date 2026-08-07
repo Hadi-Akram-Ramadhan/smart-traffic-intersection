@@ -3,7 +3,7 @@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 
-import { chartConfig, PEAK_THRESHOLD } from "../constants";
+import { chartConfig, PEAK_THRESHOLD, fmtHour } from "../constants";
 import type { RawRow } from "../types";
 
 export function VehiclesAreaChart({
@@ -17,17 +17,36 @@ export function VehiclesAreaChart({
   xKey: "hour" | "day";
   xFormatter: (b: string) => string;
 }) {
-  const both = [...data];
   const prev = previousData ?? [];
-  const chartData = both.map((r, i) => {
-    const p = prev[i];
+
+  // Hourly view: fill all 24 slots (zeros for empty hours) so a single
+  // bucket still renders a full visible line instead of a lone dot.
+  type $Point = RawRow & { previous: number; hour?: string; day?: string };
+  const filledHourly: $Point[] = Array.from({ length: 24 }, (_, h) => {
+    const byHour = new Map(data.map((r) => [new Date(r.bucket).getHours(), r]));
+    const prevByHour = new Map(prev.map((r) => [new Date(r.bucket).getHours(), r]));
+    const r = byHour.get(h);
+    const p = prevByHour.get(h);
     return {
-      ...r,
-      [xKey]: xFormatter(r.bucket),
-      previous: p ? p.vehicles : 0,
+      bucket: r?.bucket ?? new Date(2026, 0, 1, h).toISOString(),
+      vehicles: r?.vehicles ?? 0,
+      readings: r?.readings ?? 0,
+      crowded: r?.crowded ?? 0,
+      hour: fmtHour(new Date(2026, 0, 1, h).toISOString()),
+      previous: p?.vehicles ?? 0,
     };
   });
-  const maxVehicles = Math.max(0, ...data.map((r) => r.vehicles));
+
+  const chartData = (xKey === "hour" ? filledHourly : data.map((r, i) => {
+          const p = prev[i];
+          return {
+            ...r,
+            day: xFormatter(r.bucket),
+            previous: p ? p.vehicles : 0,
+          };
+        })) as $Point[];
+
+  const maxVehicles = Math.max(0, ...chartData.map((r) => r.vehicles));
   const yDomain = [0, Math.max(maxVehicles + 20, PEAK_THRESHOLD * 2)] as [number, number];
   return (
     <ChartContainer config={chartConfig} className="h-72 w-full">
