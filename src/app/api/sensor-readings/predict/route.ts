@@ -24,13 +24,13 @@ export async function GET() {
   const avg = rows.reduce((acc, r) => acc + r.avg, 0) / rows.length;
 
   const weekday = now.toLocaleDateString("en-US", { weekday: "short" });
-  const nextHour = new Date(now.getTime() + 3600000);
+  const nextUpdate = new Date(now.getTime() + 60_000);
 
   return NextResponse.json({
     predictedCount: Math.round(avg),
     period: "7-day average",
     weekday,
-    nextUpdate: nextHour.toISOString(),
+    nextUpdate: nextUpdate.toISOString(),
     basis: {
       days: rows.length,
       avg,
