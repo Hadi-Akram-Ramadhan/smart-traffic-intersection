@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RANGES, fmtDay, fmtHour } from "../constants";
 import { useTrafficStats } from "../hooks/useTrafficStats";
 import type { Range } from "../types";
+import { Heatmap } from "./heatmap";
 import { PredictionWidget } from "./prediction-widget";
 import { ReadingLog } from "./reading-log";
 import { VehiclesAreaChart } from "./vehicles-area-chart";
@@ -119,6 +120,8 @@ export function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <Heatmap />
 
       <ReadingLog logs={data.logs} />
     </div>
