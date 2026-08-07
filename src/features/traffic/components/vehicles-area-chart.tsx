@@ -8,14 +8,25 @@ import type { RawRow } from "../types";
 
 export function VehiclesAreaChart({
   data,
+  previousData,
   xKey,
   xFormatter,
 }: {
   data: RawRow[];
+  previousData?: RawRow[];
   xKey: "hour" | "day";
   xFormatter: (b: string) => string;
 }) {
-  const chartData = data.map((r) => ({ ...r, [xKey]: xFormatter(r.bucket) }));
+  const both = [...data];
+  const prev = previousData ?? [];
+  const chartData = both.map((r, i) => {
+    const p = prev[i];
+    return {
+      ...r,
+      [xKey]: xFormatter(r.bucket),
+      previous: p ? p.vehicles : 0,
+    };
+  });
   const maxVehicles = Math.max(0, ...data.map((r) => r.vehicles));
   const yDomain = [0, Math.max(maxVehicles + 20, PEAK_THRESHOLD * 2)] as [number, number];
   return (
@@ -33,16 +44,27 @@ export function VehiclesAreaChart({
         <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
         <ReferenceLine
           y={PEAK_THRESHOLD}
-          stroke="hsl(var(--chart-2))"
+          stroke="hsl(var(--destructive))"
           strokeDasharray="6 4"
           strokeWidth={2}
           label={{
             value: `Peak (${PEAK_THRESHOLD})`,
             position: "right",
-            fill: "hsl(var(--chart-2))",
+            fill: "hsl(var(--destructive))",
             fontSize: 11,
           }}
         />
+        {prev.length > 0 && (
+          <Area
+            dataKey="previous"
+            type="natural"
+            stroke="var(--color-previous)"
+            strokeDasharray="4 4"
+            fill="none"
+            strokeWidth={1.5}
+            dot={false}
+          />
+        )}
         <Area
           dataKey="vehicles"
           type="natural"

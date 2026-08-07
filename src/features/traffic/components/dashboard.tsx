@@ -23,6 +23,8 @@ export function Dashboard() {
 
   const chartData =
     range === "today" ? data.today : range === "7d" ? data.last7 : data.last30;
+  const previousData =
+    range === "today" ? data.prevToday : range === "7d" ? data.prevLast7 : data.prevLast30;
 
   const title =
     range === "today"
@@ -97,9 +99,19 @@ export function Dashboard() {
         <CardContent>
           <div className="h-72">
             {range === "today" ? (
-              <VehiclesAreaChart data={chartData} xKey="hour" xFormatter={fmtHour} />
+              <VehiclesAreaChart
+                data={chartData}
+                previousData={previousData}
+                xKey="hour"
+                xFormatter={fmtHour}
+              />
             ) : (
-              <VehiclesAreaChart data={chartData} xKey="day" xFormatter={fmtDay} />
+              <VehiclesAreaChart
+                data={chartData}
+                previousData={previousData}
+                xKey="day"
+                xFormatter={fmtDay}
+              />
             )}
           </div>
         </CardContent>

@@ -14,8 +14,11 @@ export type RawRow = {
 
 export type StatsResponse = {
   today: RawRow[];
+  prevToday: RawRow[];
   last7: RawRow[];
+  prevLast7: RawRow[];
   last30: RawRow[];
+  prevLast30: RawRow[];
   logs: LogRow[];
   summary: {
     totalVehiclesToday: number;
