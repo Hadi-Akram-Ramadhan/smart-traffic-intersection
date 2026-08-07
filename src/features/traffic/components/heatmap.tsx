@@ -56,8 +56,8 @@ export function Heatmap() {
 					)
 				) : (
 					<div className="overflow-x-auto">
-						<div className="grid w-max gap-1 mx-auto">
-							<div className="grid grid-cols-[auto_repeat(24,1.5rem)] gap-1 items-end">
+						<div className="grid w-max gap-0.5 mx-auto">
+							<div className="grid grid-cols-[auto_repeat(24,calc(var(--spacing)*4))] gap-0.5 items-end">
 								<span className="h-4" />
 								{Array.from({ length: 24 }, (_, h) => (
 									<span
@@ -68,12 +68,12 @@ export function Heatmap() {
 								))}
 							</div>
 							{DAYS.map((day, dow) => (
-								<div key={dow} className="grid grid-cols-[auto_repeat(24,1.5rem)] gap-1 items-center">
+								<div key={dow} className="grid grid-cols-[auto_repeat(24,calc(var(--spacing)*4))] gap-0.5 items-center">
 									<span className="pr-1 text-xs text-muted-foreground whitespace-nowrap text-right">{day}</span>
 									{grid[dow].map((val, h) => (
 										<button
 											key={h}
-											className="h-4 w-4 rounded-[3px] p-0"
+											className="size-4 rounded-[2px] p-0"
 											style={{
 												backgroundColor: cellColor(val, max),
 												opacity: val === 0 ? 0.3 : 0.85,

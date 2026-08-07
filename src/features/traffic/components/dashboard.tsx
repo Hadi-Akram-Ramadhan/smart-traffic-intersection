@@ -132,9 +132,10 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      <Heatmap />
-
-      <ReadingLog logs={data.logs} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start">
+        <Heatmap />
+        <ReadingLog logs={data.logs} />
+      </div>
     </div>
   );
 }
