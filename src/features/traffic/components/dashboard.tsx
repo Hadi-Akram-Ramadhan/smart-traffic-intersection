@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RANGES, fmtDay, fmtHour } from "../constants";
 import { useTrafficStats } from "../hooks/useTrafficStats";
 import type { Range } from "../types";
+import { PredictionWidget } from "./prediction-widget";
 import { ReadingLog } from "./reading-log";
 import { VehiclesAreaChart } from "./vehicles-area-chart";
 
@@ -45,7 +46,7 @@ export function Dashboard() {
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Vehicles Today</CardDescription>
@@ -70,6 +71,8 @@ export function Dashboard() {
             <p className="text-3xl font-semibold">{data.summary.avgVehiclesToday}</p>
           </CardContent>
         </Card>
+
+        <PredictionWidget />
       </div>
 
       {/* Single chart with range selector */}
