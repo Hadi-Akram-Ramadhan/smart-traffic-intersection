@@ -78,12 +78,12 @@ export function Dashboard() {
 
       {/* Single chart with range selector */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
           <div>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{subtitle}</CardDescription>
           </div>
-          <div className="flex gap-1 rounded-lg border bg-muted p-1">
+          <div className="flex flex-wrap gap-1 rounded-lg border bg-muted p-1">
             {RANGES.map((r) => (
               <button
                 key={r.key}

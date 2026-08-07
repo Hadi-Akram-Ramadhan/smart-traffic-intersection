@@ -13,7 +13,7 @@ export function ReadingLog({ logs }: { logs: LogRow[] }) {
         <CardDescription>Latest 50 sensor readings</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="sticky top-0 bg-background">
