@@ -9,8 +9,24 @@ function toNum(v: bigint | number): number {
   return typeof v === "bigint" ? Number(v) : v;
 }
 
+// Asia/Jakarta is fixed UTC+7 with no DST. Floor an instant to the start of
+// its WIB calendar day and return that instant in UTC.
+const WIB_OFFSET_MS = 7 * 3_600_000;
+function wibDayStart(now: number): Date {
+  const wibMs = now + WIB_OFFSET_MS;
+  const dayStartUtcMs = Math.floor(wibMs / 86_400_000) * 86_400_000 - WIB_OFFSET_MS;
+  return new Date(dayStartUtcMs);
+}
+
+// Bucket by the WIB calendar day: shift the instant to UTC+7 before
+// truncating so a record at 00:30 WIB joins the morning rush of the same WIB
+// day instead of the earlier UTC day. Keep this inline in the query templates
+// — Prisma binds interpolated values, so an expression via ${} would become a
+// string parameter and break grouping.
+const DAY_BUCKET_SQL = `DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket`;
+
 const DAILY_QUERY = (start: Date) => prisma.$queryRaw<RawRow[]>`
-  SELECT DATE_TRUNC('day', "recordedAt") AS bucket,
+  SELECT DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket,
          SUM("vehicleCount")::int AS vehicles,
          COUNT(*)::int AS readings,
          COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
@@ -19,7 +35,7 @@ const DAILY_QUERY = (start: Date) => prisma.$queryRaw<RawRow[]>`
   GROUP BY 1 ORDER BY 1
 `;
 const DAILY_RANGE_QUERY = (start: Date, end: Date) => prisma.$queryRaw<RawRow[]>`
-  SELECT DATE_TRUNC('day', "recordedAt") AS bucket,
+  SELECT DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket,
          SUM("vehicleCount")::int AS vehicles,
          COUNT(*)::int AS readings,
          COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
@@ -29,9 +45,8 @@ const DAILY_RANGE_QUERY = (start: Date, end: Date) => prisma.$queryRaw<RawRow[]>
 `;
 
 export async function GET() {
-  const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+  const now = Date.now();
+  const todayStart = wibDayStart(now);
   const yesterdayStart = new Date(todayStart.getTime() - 86400000);
   const weekStart = new Date(todayStart.getTime() - 6 * 86400000);
   const prevWeekStart = new Date(todayStart.getTime() - 13 * 86400000);
