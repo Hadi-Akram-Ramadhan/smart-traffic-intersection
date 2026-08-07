@@ -56,41 +56,35 @@ export function Heatmap() {
 					)
 				) : (
 					<div className="overflow-x-auto">
-						<table className="w-full text-xs">
-							<thead>
-								<tr>
-									<th className="p-1" />
-									{Array.from({ length: 24 }, (_, h) => (
-										<th
-											key={h}
-											className="p-1 text-center text-muted-foreground font-normal">
-											{h}
-										</th>
-									))}
-								</tr>
-							</thead>
-							<tbody>
-								{DAYS.map((day, dow) => (
-									<tr key={dow}>
-										<td className="p-1 text-muted-foreground text-right pr-2 whitespace-nowrap">{day}</td>
-										{grid[dow].map((val, h) => (
-											<td
-												key={h}
-												className="p-0.5"
-												title={`${day} ${h}:00 — ${val} vehicles`}>
-												<div
-													className="w-full aspect-square rounded-sm"
-													style={{
-														backgroundColor: cellColor(val, max),
-														opacity: val === 0 ? 0.3 : 0.85,
-													}}
-												/>
-											</td>
-										))}
-									</tr>
+						<div className="grid gap-1">
+							<div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1">
+								<span className="p-1" />
+								{Array.from({ length: 24 }, (_, h) => (
+									<span
+										key={h}
+										className="p-1 text-center text-muted-foreground font-normal">
+										{h}
+									</span>
 								))}
-							</tbody>
-						</table>
+							</div>
+							{DAYS.map((day, dow) => (
+								<div key={dow} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1">
+									<span className="p-1 text-muted-foreground whitespace-nowrap">{day}</span>
+									{grid[dow].map((val, h) => (
+										<button
+											key={h}
+											className="block w-full aspect-square rounded-sm p-0"
+											style={{
+												backgroundColor: cellColor(val, max),
+												opacity: val === 0 ? 0.3 : 0.85,
+											}}
+											title={`${day} ${h}:00 — ${val} vehicles`}
+											aria-label={`${day} ${h}:00 — ${val} vehicles`}
+										/>
+									))}
+								</div>
+							))}
+						</div>
 
 						<div className="mt-3 flex items-center justify-center gap-3">
 							<span className="text-[10px] uppercase tracking-wide text-muted-foreground">Low</span>
