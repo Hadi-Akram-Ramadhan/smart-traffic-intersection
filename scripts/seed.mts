@@ -1,12 +1,10 @@
 // Seed script: insert readings spread across today, last 7 days, last 30 days.
-// Run: node --experimental-strip-types scripts/seed.mts
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client.ts";
+import "dotenv/config";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "../src/generated/prisma/client";
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set");
-
-const adapter = new PrismaPg({ connectionString: url });
+const url = process.env.DATABASE_URL || "file:./dev.db";
+const adapter = new PrismaBetterSqlite3({ url });
 const prisma = new PrismaClient({ adapter });
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -14,7 +12,6 @@ const now = new Date();
 
 const rows: { vehicleCount: number; isCrowded: boolean; recordedAt: Date }[] = [];
 
-// Today: 24 hours, one reading per hour, busy morning/evening peaks
 for (let h = 0; h < 24; h++) {
   const t = new Date(now);
   t.setHours(h, 30, 0, 0);
@@ -24,7 +21,6 @@ for (let h = 0; h < 24; h++) {
   rows.push({ vehicleCount: count, isCrowded: count > 2, recordedAt: t });
 }
 
-// Last 7 days: one reading per day (skip today, already covered)
 for (let d = 1; d <= 7; d++) {
   const t = new Date(now.getTime() - d * DAY);
   t.setHours(12, 0, 0, 0);
@@ -32,7 +28,6 @@ for (let d = 1; d <= 7; d++) {
   rows.push({ vehicleCount: count, isCrowded: true, recordedAt: t });
 }
 
-// Last 30 days: one reading per day (skip days already covered)
 for (let d = 8; d <= 30; d++) {
   const t = new Date(now.getTime() - d * DAY);
   t.setHours(12, 0, 0, 0);

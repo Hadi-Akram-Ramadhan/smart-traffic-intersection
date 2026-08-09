@@ -3,14 +3,6 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type RawRow = { bucket: Date; vehicles: bigint | number; readings: bigint | number; crowded: bigint | number };
-
-function toNum(v: bigint | number): number {
-  return typeof v === "bigint" ? Number(v) : v;
-}
-
-// Asia/Jakarta is fixed UTC+7 with no DST. Floor an instant to the start of
-// its WIB calendar day and return that instant in UTC.
 const WIB_OFFSET_MS = 7 * 3_600_000;
 function wibDayStart(now: number): Date {
   const wibMs = now + WIB_OFFSET_MS;
@@ -18,31 +10,17 @@ function wibDayStart(now: number): Date {
   return new Date(dayStartUtcMs);
 }
 
-// Bucket by the WIB calendar day: shift the instant to UTC+7 before
-// truncating so a record at 00:30 WIB joins the morning rush of the same WIB
-// day instead of the earlier UTC day. Keep this inline in the query templates
-// — Prisma binds interpolated values, so an expression via ${} would become a
-// string parameter and break grouping.
-const DAY_BUCKET_SQL = `DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket`;
+function getHourBucket(date: Date): string {
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d.toISOString();
+}
 
-const DAILY_QUERY = (start: Date) => prisma.$queryRaw<RawRow[]>`
-  SELECT DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket,
-         SUM("vehicleCount")::int AS vehicles,
-         COUNT(*)::int AS readings,
-         COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-  FROM "TrafficReading"
-  WHERE "recordedAt" >= ${start}
-  GROUP BY 1 ORDER BY 1
-`;
-const DAILY_RANGE_QUERY = (start: Date, end: Date) => prisma.$queryRaw<RawRow[]>`
-  SELECT DATE_TRUNC('day', "recordedAt" + INTERVAL '7 hours') AS bucket,
-         SUM("vehicleCount")::int AS vehicles,
-         COUNT(*)::int AS readings,
-         COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-  FROM "TrafficReading"
-  WHERE "recordedAt" >= ${start} AND "recordedAt" < ${end}
-  GROUP BY 1 ORDER BY 1
-`;
+function getWibDayBucket(date: Date): string {
+  const wibMs = date.getTime() + WIB_OFFSET_MS;
+  const dayStartUtcMs = Math.floor(wibMs / 86_400_000) * 86_400_000 - WIB_OFFSET_MS;
+  return new Date(dayStartUtcMs).toISOString();
+}
 
 export async function GET() {
   const now = Date.now();
@@ -53,46 +31,98 @@ export async function GET() {
   const monthStart = new Date(todayStart.getTime() - 29 * 86400000);
   const prevMonthStart = new Date(todayStart.getTime() - 59 * 86400000);
 
-  const [today, prevToday, last7, prevLast7, last30, prevLast30, logs] = await Promise.all([
-    prisma.$queryRaw<RawRow[]>`
-      SELECT DATE_TRUNC('hour', "recordedAt") AS bucket,
-             SUM("vehicleCount")::int AS vehicles,
-             COUNT(*)::int AS readings,
-             COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-      FROM "TrafficReading"
-      WHERE "recordedAt" >= ${todayStart}
-      GROUP BY 1 ORDER BY 1
-    `,
-    prisma.$queryRaw<RawRow[]>`
-      SELECT DATE_TRUNC('hour', "recordedAt") AS bucket,
-             SUM("vehicleCount")::int AS vehicles,
-             COUNT(*)::int AS readings,
-             COUNT(*) FILTER (WHERE "isCrowded")::int AS crowded
-      FROM "TrafficReading"
-      WHERE "recordedAt" >= ${yesterdayStart} AND "recordedAt" < ${todayStart}
-      GROUP BY 1 ORDER BY 1
-    `,
-    DAILY_QUERY(weekStart),
-    DAILY_RANGE_QUERY(prevWeekStart, weekStart),
-    DAILY_QUERY(monthStart),
-    DAILY_RANGE_QUERY(prevMonthStart, monthStart),
-    prisma.trafficReading.findMany({ orderBy: { recordedAt: "desc" }, take: 50 }),
+  const [allReadings, logs] = await Promise.all([
+    prisma.trafficReading.findMany({
+      where: { recordedAt: { gte: prevMonthStart } },
+      orderBy: { recordedAt: "asc" },
+    }),
+    prisma.trafficReading.findMany({
+      orderBy: { recordedAt: "desc" },
+      take: 50,
+    }),
   ]);
 
-  const todayTotal = (today as RawRow[]).reduce((s, r) => s + toNum(r.vehicles), 0);
+  const todayMap = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+  const prevTodayMap = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+  const last7Map = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+  const prevLast7Map = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+  const last30Map = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+  const prevLast30Map = new Map<string, { bucket: string; vehicles: number; readings: number; crowded: number }>();
+
+  for (const r of allReadings) {
+    const recDate = new Date(r.recordedAt);
+    const time = recDate.getTime();
+
+    if (time >= todayStart.getTime()) {
+      const bucket = getHourBucket(recDate);
+      const curr = todayMap.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      todayMap.set(bucket, curr);
+    } else if (time >= yesterdayStart.getTime()) {
+      const bucket = getHourBucket(recDate);
+      const curr = prevTodayMap.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      prevTodayMap.set(bucket, curr);
+    }
+
+    if (time >= weekStart.getTime()) {
+      const bucket = getWibDayBucket(recDate);
+      const curr = last7Map.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      last7Map.set(bucket, curr);
+    } else if (time >= prevWeekStart.getTime()) {
+      const bucket = getWibDayBucket(recDate);
+      const curr = prevLast7Map.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      prevLast7Map.set(bucket, curr);
+    }
+
+    if (time >= monthStart.getTime()) {
+      const bucket = getWibDayBucket(recDate);
+      const curr = last30Map.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      last30Map.set(bucket, curr);
+    } else if (time >= prevMonthStart.getTime()) {
+      const bucket = getWibDayBucket(recDate);
+      const curr = prevLast30Map.get(bucket) || { bucket, vehicles: 0, readings: 0, crowded: 0 };
+      curr.vehicles += r.vehicleCount;
+      curr.readings += 1;
+      if (r.isCrowded) curr.crowded += 1;
+      prevLast30Map.set(bucket, curr);
+    }
+  }
+
+  const todayArr = Array.from(todayMap.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+  const prevTodayArr = Array.from(prevTodayMap.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+  const last7Arr = Array.from(last7Map.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+  const prevLast7Arr = Array.from(prevLast7Map.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+  const last30Arr = Array.from(last30Map.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+  const prevLast30Arr = Array.from(prevLast30Map.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+
+  const todayTotal = todayArr.reduce((s, r) => s + r.vehicles, 0);
 
   return NextResponse.json({
-    today,
-    prevToday,
-    last7,
-    prevLast7,
-    last30,
-    prevLast30,
+    today: todayArr,
+    prevToday: prevTodayArr,
+    last7: last7Arr,
+    prevLast7: prevLast7Arr,
+    last30: last30Arr,
+    prevLast30: prevLast30Arr,
     logs,
     summary: {
       totalVehiclesToday: todayTotal,
-      readingsToday: (today as RawRow[]).reduce((s, r) => s + toNum(r.readings), 0),
-      avgVehiclesToday: (today as RawRow[]).length ? Math.round(todayTotal / (today as RawRow[]).length) : 0,
+      readingsToday: todayArr.reduce((s, r) => s + r.readings, 0),
+      avgVehiclesToday: todayArr.length ? Math.round(todayTotal / todayArr.length) : 0,
     },
   });
 }

@@ -7,8 +7,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // CLI/migration uses direct connection (session mode pooler)
-    // Runtime queries go through the pg adapter using DATABASE_URL (transaction mode)
-    url: env("DIRECT_URL"),
+    url: env("DATABASE_URL"),
   },
 });

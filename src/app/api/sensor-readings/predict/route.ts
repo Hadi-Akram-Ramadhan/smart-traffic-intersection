@@ -3,25 +3,30 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type Row = { day: Date; avg: number };
-
 export async function GET() {
   const now = new Date();
   const past7 = new Date(now.getTime() - 6 * 86400000);
 
-  const rows = await prisma.$queryRaw<Row[]>`
-    SELECT DATE_TRUNC('day', "recordedAt") AS day,
-           AVG("vehicleCount")::float AS avg
-    FROM "TrafficReading"
-    WHERE "recordedAt" >= ${past7}
-    GROUP BY 1
-  `;
+  const readings = await prisma.trafficReading.findMany({
+    where: { recordedAt: { gte: past7 } },
+  });
 
-  if (rows.length === 0) {
+  if (readings.length === 0) {
     return NextResponse.json({ predictedCount: null, basis: null }, { status: 200 });
   }
 
-  const avg = rows.reduce((acc, r) => acc + r.avg, 0) / rows.length;
+  const dayMap = new Map<string, { total: number; count: number }>();
+  for (const r of readings) {
+    const d = new Date(r.recordedAt);
+    const dayStr = d.toISOString().split("T")[0];
+    const curr = dayMap.get(dayStr) || { total: 0, count: 0 };
+    curr.total += r.vehicleCount;
+    curr.count += 1;
+    dayMap.set(dayStr, curr);
+  }
+
+  const dayAvgs = Array.from(dayMap.values()).map((d) => d.total / d.count);
+  const avg = dayAvgs.reduce((acc, v) => acc + v, 0) / dayAvgs.length;
 
   const weekday = now.toLocaleDateString("en-US", { weekday: "short" });
   const nextUpdate = new Date(now.getTime() + 60_000);
@@ -32,7 +37,7 @@ export async function GET() {
     weekday,
     nextUpdate: nextUpdate.toISOString(),
     basis: {
-      days: rows.length,
+      days: dayAvgs.length,
       avg,
       unit: "vehicles/day",
     },

@@ -7,14 +7,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model TrafficReading {
   id           Int      @id @default(autoincrement())
   vehicleCount Int
   isCrowded    Boolean  // true when vehicleCount > 2
-  recordedAt   DateTime @default(now()) @db.Timestamptz(6)
+  recordedAt   DateTime @default(now())
 
   @@index([recordedAt])
 }

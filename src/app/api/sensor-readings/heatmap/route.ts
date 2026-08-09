@@ -3,24 +3,34 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type Row = { dow: number; hour: number; avg: number };
-
 export async function GET() {
   const since = new Date(Date.now() - 30 * 86400000);
 
-  const rows = await prisma.$queryRaw<Row[]>`
-    SELECT EXTRACT(DOW FROM "recordedAt")::int AS dow,
-           EXTRACT(HOUR FROM "recordedAt")::int AS hour,
-           AVG("vehicleCount")::float AS avg
-    FROM "TrafficReading"
-    WHERE "recordedAt" >= ${since}
-    GROUP BY 1, 2
-  `;
+  const readings = await prisma.trafficReading.findMany({
+    where: { recordedAt: { gte: since } },
+  });
 
-  // grid[dow][hour] = avg vehicles
+  const counts: { total: number; n: number }[][] = Array.from({ length: 7 }, () =>
+    Array.from({ length: 24 }, () => ({ total: 0, n: 0 }))
+  );
+
+  for (const r of readings) {
+    const d = new Date(r.recordedAt);
+    const dow = d.getDay();
+    const hour = d.getHours();
+    counts[dow][hour].total += r.vehicleCount;
+    counts[dow][hour].n += 1;
+  }
+
   const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
-  for (const r of rows) {
-    grid[r.dow][r.hour] = Math.round(r.avg * 10) / 10;
+  for (let dow = 0; dow < 7; dow++) {
+    for (let hour = 0; hour < 24; hour++) {
+      const cell = counts[dow][hour];
+      if (cell.n > 0) {
+        const avg = cell.total / cell.n;
+        grid[dow][hour] = Math.round(avg * 10) / 10;
+      }
+    }
   }
 
   const max = Math.max(1, ...grid.flat());

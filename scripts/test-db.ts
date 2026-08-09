@@ -1,11 +1,11 @@
 import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL missing");
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+  const url = process.env.DATABASE_URL || "file:./dev.db";
+  const adapter = new PrismaBetterSqlite3({ url });
+  const prisma = new PrismaClient({ adapter });
 
   const samples = [0, 1, 2, 3, 5, 8];
   for (const n of samples) {
