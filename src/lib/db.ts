@@ -1,5 +1,6 @@
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "../generated/prisma/client";
+// @ts-ignore
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
